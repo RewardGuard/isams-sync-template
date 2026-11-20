@@ -1,0 +1,6 @@
+data/
+isams_dump/
+alert.md
+__pycache__/
+*.pyc
+.env
