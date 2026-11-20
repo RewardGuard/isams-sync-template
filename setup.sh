@@ -5,16 +5,29 @@ set -euo pipefail
 
 TEMPLATE="${ISAMS_TEMPLATE:-RewardGuard/isams-sync-template}"
 
-command -v gh >/dev/null || { echo "Instala GitHub CLI primero: https://cli.github.com"; exit 1; }
-gh auth status >/dev/null 2>&1 || { echo "Inicia sesion con: gh auth login"; exit 1; }
+if ! command -v gh >/dev/null; then
+  if [[ "$(uname)" == "Darwin" ]] && command -v brew >/dev/null; then
+    echo "Instalando GitHub CLI con Homebrew..."; brew install gh
+  else
+    echo "Instala GitHub CLI primero (https://cli.github.com) y vuelve a pegar el comando."; exit 1
+  fi
+fi
+if ! gh auth status >/dev/null 2>&1; then
+  read -r -p "Tienes cuenta de GitHub? (s/n): " HAS
+  if [[ "$HAS" =~ ^[nN] ]]; then
+    echo "Se abrira github.com/signup. Crea tu cuenta, verifica tu correo y vuelve aqui."
+    (open https://github.com/signup || xdg-open https://github.com/signup) >/dev/null 2>&1 || echo "Abre https://github.com/signup en tu navegador."
+    read -r -p "Cuando tengas tu cuenta lista, presiona Enter " _
+  fi
+  echo "Se abrira el navegador para iniciar sesion en GitHub."
+  gh auth login --web --git-protocol https
+fi
 
 read -r -p "Subdominio de tu portal iSAMS (ej. 'miescuela' en https://miescuela.isamshosting.cloud): " SCHOOL
-read -r -p "Tu ID de estudiante (numero; ver README): " SID
 read -r -p "Usuario de iSAMS: " IUSER
 read -r -s -p "Contrasena de iSAMS (no se muestra): " IPASS; echo
 read -r -p "Nombre de tu repo privado [isams-sync]: " NAME; NAME="${NAME:-isams-sync}"
 
-[[ "$SID" =~ ^[0-9]+$ ]] || { echo "El ID de estudiante debe ser un numero."; exit 1; }
 [[ -n "$SCHOOL" && -n "$IUSER" && -n "$IPASS" ]] || { echo "Faltan datos."; exit 1; }
 
 OWNER="$(gh api user --jq .login)"
@@ -31,7 +44,6 @@ for i in 1 2 3 4 5 6; do gh api "repos/$REPO" >/dev/null 2>&1 && break; sleep 3;
 
 # Los valores van por stdin, no en la linea de comandos.
 printf '%s' "$SCHOOL" | gh secret set ISAMS_SCHOOL --repo "$REPO"
-printf '%s' "$SID"    | gh secret set ISAMS_STUDENT_ID --repo "$REPO"
 printf '%s' "$IUSER"  | gh secret set ISAMS_USER --repo "$REPO"
 printf '%s' "$IPASS"  | gh secret set ISAMS_PASS --repo "$REPO"
 unset IPASS

@@ -40,6 +40,7 @@ def num(v):
 
 
 def fetch_raw():
+    c.ensure_student_id()
     status, books = c.api_json(f"/markbooks/students/{c.STUDENT_ID}")
     if status != 200:
         raise RuntimeError(f"markbooks HTTP {status}")

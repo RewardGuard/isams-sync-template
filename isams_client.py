@@ -45,9 +45,8 @@ TOKEN_FILE = os.path.expanduser("~/.isams_tokens.json")
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36")
 # El ID del estudiante sale de las llamadas de red del portal (ver README).
+# Si no lo defines, se busca solo en tu perfil (ver ensure_student_id).
 STUDENT_ID = os.environ.get("ISAMS_STUDENT_ID", "").strip()
-if not STUDENT_ID:
-    sys.exit("Falta ISAMS_STUDENT_ID (ver README, paso 'Encuentra tu ID de estudiante').")
 TERM_ID = os.environ.get("ISAMS_TERM", "")
 
 
@@ -215,6 +214,7 @@ def api_get(path):
 
 
 def dump():
+    ensure_student_id()
     targets = {
         "profile": "/account/profile",
         "terms": "/schools/terms",
@@ -242,6 +242,48 @@ def api_json(path):
         return status, body
 
 
+def _numbers(obj, out=None):
+    """Todos los valores numericos largos del perfil, con las claves 'id' primero."""
+    out = [] if out is None else out
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            if isinstance(v, (dict, list)):
+                _numbers(v, out)
+            elif isinstance(v, (int, str)) and str(v).isdigit() and len(str(v)) >= 4:
+                out.append((0 if "id" in k.lower() else 1, str(v)))
+    elif isinstance(obj, list):
+        for v in obj:
+            _numbers(v, out)
+    return out
+
+
+def candidate_ids(profile):
+    seen, result = set(), []
+    for _, v in sorted(_numbers(profile), key=lambda t: t[0]):
+        if v not in seen:
+            seen.add(v)
+            result.append(v)
+    return result
+
+
+def ensure_student_id():
+    """Si no hay ISAMS_STUDENT_ID, prueba los numeros de tu perfil hasta que
+    /markbooks/students/<numero> responda 200 (solo lecturas de tu propia cuenta)."""
+    global STUDENT_ID
+    if STUDENT_ID:
+        return STUDENT_ID
+    status, profile = api_json("/account/profile")
+    if status != 200:
+        sys.exit(f"No pude leer tu perfil (HTTP {status}). Define ISAMS_STUDENT_ID a mano (ver README).")
+    for cand in candidate_ids(profile):
+        st, _, _ = api_get(f"/markbooks/students/{cand}")
+        if st == 200:
+            STUDENT_ID = cand
+            print("ID de estudiante encontrado automaticamente.")
+            return STUDENT_ID
+    sys.exit("No encontre tu ID de estudiante en el perfil. Define ISAMS_STUDENT_ID a mano (ver README).")
+
+
 def find_list(obj):
     """Devuelve la lista de dicts de una respuesta (lista directa o dentro de un dict)."""
     if isinstance(obj, list):
@@ -262,6 +304,7 @@ def write_json(name, data):
 
 def grades(include_archived=False):
     """Calificaciones: columnas de cada gradebook (por defecto sin los archivados)."""
+    ensure_student_id()
     status, books = api_json(f"/markbooks/students/{STUDENT_ID}")
     result = []
     for b in find_list(books):
@@ -276,6 +319,7 @@ def grades(include_archived=False):
 
 def conduct():
     """Conducta: tipos de reward/conducta y los registros del estudiante en cada tipo."""
+    ensure_student_id()
     _, types = api_json("/rewardsandconduct/rewardtypes")
     items = find_list(types)
     ids = [t["id"] for t in items if isinstance(t, dict) and "id" in t] or [2, 3, 4, 5, 6, 9]
