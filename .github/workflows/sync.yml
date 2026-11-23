@@ -2,12 +2,29 @@ name: isams-sync
 
 on:
   schedule:
-    - cron: "7 */4 * * *"   # cada 4 horas (UTC)
-  workflow_dispatch:         # boton "Run workflow" para correrlo a mano
+    # Horas en UTC. Equivale a cada hora de 6:00 a 22:00 y a las 3:00 en hora de Mexico (UTC-6).
+    # El cron de GitHub es "de mejor esfuerzo": a veces llega tarde o se salta horas; para eso esta
+    # el vigilante de la hoja (avisa por correo y, si le diste un token, relanza la corrida).
+    - cron: "23 12-23 * * *"
+    - cron: "23 0-4 * * *"
+    - cron: "23 9 * * *"
+  push:
+    # Al cambiar el codigo se corre una sincronizacion para comprobarlo (los commits de datos no disparan nada).
+    branches: [main]
+    paths:
+      - "isams/**"
+      - "isams_client.py"
+      - "sync.py"
+      - ".github/workflows/sync.yml"
+  workflow_dispatch:
+    inputs:
+      origen:
+        description: "quien lanzo la corrida"
+        required: false
+        default: "manual"
 
 permissions:
-  contents: write            # guardar data/latest.json
-  issues: write              # abrir un Issue cuando hay cambios negativos
+  contents: write
 
 concurrency:
   group: isams-sync
@@ -15,9 +32,10 @@ concurrency:
 
 jobs:
   sync:
-    # Solo corre en TU copia privada (setup.sh crea la variable ISAMS_ENABLED).
+    # Solo corre en TU copia privada (el instalador crea la variable ISAMS_ENABLED), nunca en la plantilla publica.
     if: ${{ vars.ISAMS_ENABLED == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Seguridad - el repo debe ser privado
         env:
@@ -30,36 +48,39 @@ jobs:
           fi
 
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Login y sincronizar
+      - name: Sincronizar (login, extraccion, validacion, hoja)
         env:
           ISAMS_SCHOOL: ${{ secrets.ISAMS_SCHOOL }}
-          ISAMS_STUDENT_ID: ${{ secrets.ISAMS_STUDENT_ID }}
           ISAMS_USER: ${{ secrets.ISAMS_USER }}
           ISAMS_PASS: ${{ secrets.ISAMS_PASS }}
+          ISAMS_STUDENT_ID: ${{ secrets.ISAMS_STUDENT_ID }}
+          ISAMS_EXPECT_NAME: ${{ vars.ISAMS_EXPECT_NAME }}
+          ISAMS_NO_GPA: ${{ vars.ISAMS_NO_GPA || 'WS ' }}
+          ISAMS_AVANZADAS: ${{ vars.ISAMS_AVANZADAS || 'ADV' }}
+          SHEETS_WEBAPP_URL: ${{ secrets.SHEETS_WEBAPP_URL }}
+          SHEETS_HMAC_SECRET: ${{ secrets.SHEETS_HMAC_SECRET }}
+          RUN_ORIGIN: ${{ github.event_name == 'schedule' && 'horario' || inputs.origen || github.event_name }}
           ISAMS_DATA_DIR: data
-          CI_ALERT_FILE: alert.md
-        run: |
-          python isams_client.py login
-          python isams_sync.py
+        run: python sync.py
 
-      - name: Guardar datos
+      - name: Guardar historial en git (solo si cambio algo)
+        if: success()
         run: |
           git config user.name "isams-bot"
           git config user.email "isams-bot@users.noreply.github.com"
-          git add -f data
-          git diff --cached --quiet || git commit -m "isams: actualizacion $(date -u +'%Y-%m-%d %H:%M') UTC"
-          git push
-
-      - name: Avisar si hay cambios negativos
-        if: ${{ hashFiles('alert.md') != '' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "" >> alert.md
-          echo "cc @${{ github.repository_owner }}" >> alert.md
-          gh issue create --title "iSAMS: cambios negativos ($(date -u +'%Y-%m-%d'))" --body-file alert.md
+          for f in data/state.json data/changes.jsonl; do [ -f "$f" ] && git add -f "$f"; done
+          git diff --cached --quiet && exit 0
+          git commit -m "datos: $(date -u +'%Y-%m-%d %H:%M') UTC"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep $((i * 10))
+          done
+          echo "No se pudo guardar el historial en git" >&2
+          exit 1

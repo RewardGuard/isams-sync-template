@@ -4,3 +4,8 @@ alert.md
 __pycache__/
 *.pyc
 .env
+isams_login_debug.html
+.isams_tokens.json
+instalar/.trabajo/
+MI_PROMPT_PARA_CLAUDE.txt
+node_modules/

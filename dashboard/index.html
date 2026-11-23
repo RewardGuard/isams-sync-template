@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis calificaciones (en vivo)</title>
+<style>
+:root{--bg:#f6f5f2;--panel:#fff;--ink:#1c1c1a;--mute:#6d6b66;--line:#e5e3dd;--soft:#efede8;
+  --accent:#2f5d8a;--ok:#2e7d4f;--warn:#a8730f;--bad:#b4432b;--chip:#eef2f7}
+@media (prefers-color-scheme:dark){:root{--bg:#141413;--panel:#1d1d1b;--ink:#ecebe6;--mute:#a19f98;--line:#33322e;
+  --soft:#262623;--accent:#86b4e0;--ok:#6fc391;--warn:#e3b35b;--bad:#ea8a72;--chip:#24303c}}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1120px;margin:0 auto;padding:22px 16px 60px}
+header{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end;justify-content:space-between}
+h1{font-size:22px;margin:0}h2{font-size:16px;margin:30px 0 10px}
+.sub{color:var(--mute);font-size:13px}
+.health{display:flex;gap:8px;align-items:center;font-size:13px;padding:6px 10px;border-radius:99px;border:1px solid var(--line);background:var(--panel)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute)}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 4px}
+nav button,.seg button{font:inherit;font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+nav button.on,.seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .k{font-size:12px;color:var(--mute)}.tile .v{font-size:26px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums}.tile .s{font-size:12px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h3{margin:0;font-size:15px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.big{font-size:24px;font-weight:650;font-variant-numeric:tabular-nums}
+.low{color:var(--bad)}.mid{color:var(--warn)}
+.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden;margin:8px 0 10px}.bar>i{display:block;height:100%;background:var(--accent)}
+.cats{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.cat{display:grid;grid-template-columns:1fr 46px 54px 54px;gap:6px;font-size:13px;align-items:center}
+.cat .w{color:var(--mute);text-align:right}.cat .a{text-align:right;font-variant-numeric:tabular-nums}.cat .c{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;background:var(--chip);color:var(--ink);white-space:nowrap}
+.chip.bad{background:transparent;border:1px solid var(--bad);color:var(--bad)}.chip.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.chip.ok{background:transparent;border:1px solid var(--ok);color:var(--ok)}
+details{margin-top:8px}summary{cursor:pointer;font-size:13px;color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mute);font-weight:600;white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:auto}
+.note{font-size:12.5px;color:var(--mute);margin:-4px 0 10px}
+.warnbox{border:1px solid var(--warn);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;margin-top:10px}
+.err{border:1px solid var(--bad);color:var(--bad);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
+.empty{color:var(--mute);font-size:14px;padding:14px}
+button.small{font:inherit;font-size:12px;padding:4px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.seg{display:inline-flex;gap:4px}
+.hidden{display:none}
+.sols{display:flex;flex-direction:column;gap:10px}
+.sols details{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.sols summary{color:var(--ink);font-size:14px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.sols summary .t{font-weight:600}
+.soltext{white-space:pre-wrap;font-size:14.5px;line-height:1.6;margin:10px 0 6px;border-top:1px solid var(--line);padding-top:10px;overflow-wrap:anywhere}
+.soltext .ej{font-weight:650;display:inline-block;margin-top:8px}.soltext .resp{color:var(--ok);font-weight:600}.soltext .ver{color:var(--warn);font-weight:600}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div>
+    <h1 id="title">Mis calificaciones</h1>
+    <div class="sub" id="periodo">Cargando…</div>
+  </div>
+  <div class="health" id="health"><span class="dot"></span><span>Revisando estado…</span></div>
+</header>
+<div id="gate"></div>
+
+<nav id="nav">
+  <button data-v="resumen" class="on">Resumen</button>
+  <button data-v="materias">Materias</button>
+  <button data-v="pendientes">Pendientes</button>
+  <button data-v="conducta">Conducta</button>
+  <button data-v="historial">Historial</button>
+  <button data-v="sistema">Sistema</button>
+</nav>
+
+<section id="v-resumen">
+  <div class="tiles" id="tiles"></div>
+  <div id="discAviso"></div>
+  <h2>Ceros y escenarios</h2>
+  <div class="note">“Si vale 100” usa los pesos reales que publica iSAMS. Si el promedio de esa categoría en iSAMS no cuadra con sus trabajos, el escenario se marca como aproximado.</div>
+  <div class="tbl" id="ceros"></div>
+  <h2>Totales del trimestre</h2>
+  <div class="tbl" id="totales"></div>
+</section>
+
+<section id="v-materias" class="hidden">
+  <div class="seg" id="trims"></div>
+  <div class="grid" id="cards" style="margin-top:12px"></div>
+</section>
+
+<section id="v-pendientes" class="hidden">
+  <div class="note">Tareas de Classroom de los últimos 14 días, clasificadas por la tarea diaria. “Pedir borrador” copia la instrucción para pegarla en un chat con Claude; “Ver solución” abre la hoja de ejercicios resuelta.</div>
+  <div class="tbl" id="pend"></div>
+  <h2>Soluciones paso a paso</h2>
+  <div class="note">Hojas de ejercicios de tareas pendientes, resueltas por la tarea diaria a partir de los PDF e imágenes que subió el maestro (máximo 4 nuevas por corrida). Cada respuesta se comprueba con cálculo; lo que no se pudo leer o comprobar dice ⚠ Verifica. Úsalas para revisar tu trabajo: en el examen lo vas a hacer tú.</div>
+  <div class="sols" id="sols"></div>
+</section>
+
+<section id="v-conducta" class="hidden">
+  <div class="seg" id="condseg"><button data-c="1" class="on">Este ciclo</button><button data-c="0">Todo</button></div>
+  <div class="tbl" id="cond" style="margin-top:10px"></div>
+</section>
+
+<section id="v-historial" class="hidden">
+  <div class="note">Cada cambio detectado entre sincronizaciones (calificaciones nuevas, cambios, conducta, boletas).</div>
+  <div class="tbl" id="hist"></div>
+  <h2>Boletas oficiales publicadas</h2>
+  <div class="tbl" id="boletas"></div>
+</section>
+
+<section id="v-sistema" class="hidden">
+  <div class="note">Cada fila es una sincronización con iSAMS. “aviso” = datos guardados con algo que revisar; “rechazado” = la validación detectó un problema y se conservaron los datos anteriores.</div>
+  <h2 style="margin-top:6px">Calificaciones distintas (Classroom contra iSAMS)</h2>
+  <div class="note">Trabajos con el mismo título en Classroom y en iSAMS cuya calificación no coincide. La oficial es la de iSAMS; si crees que es un error, pregúntale al maestro. Se revisa cada hora y llega un correo por cada diferencia nueva.</div>
+  <div class="tbl" id="disc" style="margin-bottom:18px"></div>
+  <div class="tbl" id="runs"></div>
+</section>
+</main>
+
+<script>
+const SERVER = "Google Sheets";
+const SHEET = "__SHEET_ID__";   // el prompt de instalacion pone aqui el id de tu hoja
+const RANGES = {   // columnas completas: las pestañas crecen y no se corta ninguna fila
+  resumen: "resumen!A:B", materias: "materias!A:R", categorias: "categorias!A:K",
+  evaluaciones: "evaluaciones!A:O", conducta: "conducta!A:G", boletas: "boletas!A:E",
+  cambios: "cambios!A:I", corridas: "corridas!A:M", pendientes: "pendientes!A:F",
+  ceros_notas: "ceros_notas!A:D", ia_estado: "ia_estado!A:B", classroom_estado: "classroom_estado!A:B",
+  soluciones: "soluciones!A:J", discrepancias: "discrepancias!A:I"
+};
+const D = {}; const openSols = new Set(); let mcp = null, db = null, view = "resumen", trim = null, condNow = true, lastSaved = "";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => { if (v === "" || v == null) return null; const n = parseFloat(String(v).replace(",", ".")); return isNaN(n) ? null : n; };
+const yes = v => String(v).toLowerCase() === "sí" || v === true || String(v).toLowerCase() === "true";
+function rows(k){ const v = D[k] && D[k].values; if (!Array.isArray(v) || !v.length) return []; const h = v[0];
+  return v.slice(1).filter(r => r.some(c => String(c).trim() !== "")).map(r => Object.fromEntries(h.map((c,i)=>[c, r[i] ?? ""]))); }
+function kv(){ return Object.fromEntries(rows("resumen").map(r => [r.campo, r.valor])); }
+const cls = x => x == null ? "" : x < 70 ? "low" : x < 80 ? "mid" : "";
+const fmt = x => x == null ? "—" : (Math.round(x * 10) / 10).toString();
+function ago(iso){ const t = Date.parse(iso); if (isNaN(t)) return iso || "—"; const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "hace un momento" : m < 60 ? `hace ${m} min` : m < 1440 ? `hace ${Math.round(m/60)} h` : `hace ${Math.round(m/1440)} d`; }
+function codeMsg(e){ const c = e && e.code;
+  if (c === "needs_reauth") return "Tu conexión con Google Sheets expiró: reconéctala en claude.ai → Configuración → Conectores.";
+  if (c === "server_not_connected") return "Este navegador no tiene el conector de Google Sheets: agrégalo en claude.ai → Configuración → Conectores.";
+  if (c === "approval_required" || c === "not_in_manifest" || c === "consent_required") return "La página necesita tu permiso para leer la hoja de datos.";
+  if (c === "server_unavailable") return "Google Sheets no respondió; intenta en un momento.";
+  if (c === "tool_error") return "Google Sheets devolvió un error: " + (e.message || "");
+  return "No se pudo leer la hoja (" + (c || "error") + ")."; }
+
+function health(){
+  const runs = rows("corridas"); const el = document.getElementById("health");
+  if (!runs.length) { el.innerHTML = '<span class="dot"></span><span>Sin corridas registradas</span>'; return; }
+  const last = runs[runs.length - 1]; const lastOk = [...runs].reverse().find(r => r.estado === "ok" || r.estado === "aviso");
+  const age = lastOk ? (Date.now() - Date.parse(lastOk.fin)) / 3600000 : Infinity;
+  let c = "ok", t = `Sincronizado ${lastOk ? ago(lastOk.fin) : ""}`;
+  if (last.estado === "rechazado" || last.estado === "error") { c = "bad"; t = `Última sincronización falló (${ago(last.fin)})`; }
+  else if (age > 8) { c = "bad"; t = `Sin sincronizar desde ${ago(lastOk && lastOk.fin)}`; }
+  else if (last.estado === "aviso") { c = "warn"; t += " · con avisos"; }
+  el.innerHTML = `<span class="dot ${c}"></span><span>${esc(t)}</span>`;
+}
+
+function render(){
+  const R = kv(); const mats = rows("materias"); const cats = rows("categorias"); const evs = rows("evaluaciones");
+  document.getElementById("title").textContent = `Calificaciones${R.grupo ? " " + R.grupo : ""}${R.alumno ? " — " + R.alumno.split(" ")[0] : ""}`;
+  document.getElementById("periodo").textContent = R.periodo_actual ? `Periodo actual: ${R.periodo_actual} (${R.periodo_inicio} → ${R.periodo_fin}) · datos de iSAMS ${ago(R.actualizado)}` : "";
+  health();
+  const cur = mats.filter(m => !yes(m.archivada));
+  const trims = [...new Set(cur.map(m => String(m.trimestre)))].filter(Boolean).sort();
+  if (!trim || !trims.includes(trim)) {
+    // trimestre con mas materias calificadas (el que tiene datos reales)
+    trim = trims.slice().sort((a,b) => cur.filter(m => String(m.trimestre)===b && num(m.calificadas)>0).length - cur.filter(m => String(m.trimestre)===a && num(m.calificadas)>0).length)[0] || trims[0];
+  }
+  let gpa = {}; try { gpa = JSON.parse(R.gpa_por_trimestre || "{}"); } catch (e) {}
+  const tiles = [];
+  trims.forEach(t => { const g = gpa["T" + t]; if (!g) return;
+    // Con menos de 4 materias calificadas el GPA no es representativo: se muestra sin numero.
+    if (g.materias < 4) tiles.push([`GPA T${t}`, "—", `todavía no: solo ${g.materias} materia${g.materias === 1 ? "" : "s"} con calificación`]);
+    else tiles.push([`GPA T${t}`, g.gpa, `ponderado ${g.gpa_ponderado} · ${g.materias} materias`]); });
+  const zeros = evs.filter(e => !yes(e.archivada) && num(e.valor) === 0);
+  tiles.push(["Ceros", zeros.length, "trabajos en 0"]);
+  const pend = rows("pendientes"); if (D.pendientes) tiles.push(["Pendientes", pend.length, `${pend.filter(p => p.Estado === "posible").length} posibles · ${pend.filter(p => p.Estado === "bloqueada").length} bloqueadas`]);
+  const condY = rows("conducta").filter(c => yes(c.ciclo_actual)); tiles.push(["Conducta este ciclo", condY.length, "reportes"]);
+  document.getElementById("tiles").innerHTML = tiles.map(t => `<div class="tile"><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="s">${esc(t[2])}</div></div>`).join("");
+
+  document.getElementById("ceros").innerHTML = zeros.length ? `<table><tr><th>Materia</th><th>T</th><th>Trabajo</th><th>Categoría</th><th>Total actual</th><th>Si vale 100</th><th>Qué dice Classroom</th></tr>` +
+    zeros.map(z => { const m = mats.find(x => String(x.id) === String(z.materia_id)) || {};
+      const nt = rows("ceros_notas").find(n => n.key === z.key) || {};
+      return `<tr><td>${esc(z.materia)}</td><td>${esc(z.trimestre)}</td><td>${esc(z.nombre)}</td><td>${esc(z.categoria)}</td><td class="n">${fmt(num(m.total))}</td>
+      <td class="n">${z.si_vale_100 === "" ? "—" : fmt(num(z.si_vale_100))} ${z.si_vale_100 !== "" && !yes(z.escenario_exacto) ? '<span class="chip warn">aprox.</span>' : ""}</td>
+      <td>${nt.que_pedia ? esc(nt.que_pedia) + '<div class="sub">' + esc(nt.estado_classroom) + "</div>" : '<span class="sub">sin notas todavía</span>'}</td></tr>`; }).join("") + "</table>"
+    : '<div class="empty">No hay ceros.</div>';
+
+  const tm = cur.filter(m => String(m.trimestre) === trim);
+  document.getElementById("totales").innerHTML = tm.length ? `<table><tr><th>Materia</th><th>Total</th><th>Puntos GPA</th><th>Calificados</th><th>Ceros</th><th></th></tr>` +
+    tm.map(m => `<tr><td>${esc(m.materia)}</td><td class="n ${cls(num(m.total))}">${fmt(num(m.total))}</td><td class="n">${yes(m.cuenta_gpa) ? esc(m.puntos_gpa) : '<span class="sub">no cuenta</span>'}</td>
+      <td class="n">${esc(m.calificadas)}/${esc(m.evaluaciones)}</td><td class="n">${esc(m.ceros)}</td>
+      <td>${yes(m.total_es_calculado) ? '<span class="chip warn">calculado: iSAMS no publica total</span>' : '<span class="chip ok">oficial</span>'} ${m.avisos ? '<span class="chip warn" title="' + esc(m.avisos) + '">aviso</span>' : ""}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Sin materias en este trimestre.</div>';
+
+  document.getElementById("trims").innerHTML = trims.map(t => `<button data-t="${t}" class="${t === trim ? "on" : ""}">Trimestre ${t}</button>`).join("");
+  document.querySelectorAll("#trims button").forEach(b => b.onclick = () => { trim = b.dataset.t; render(); });
+  document.getElementById("cards").innerHTML = tm.map(m => {
+    const mc = cats.filter(c => String(c.materia_id) === String(m.id));
+    const me = evs.filter(e => String(e.materia_id) === String(m.id));
+    const t = num(m.total);
+    return `<div class="card"><h3><span>${esc(m.materia)}</span><span class="big ${cls(t)}">${fmt(t)}</span></h3>
+      <div class="sub">${yes(m.total_es_calculado) ? "Total calculado con los pesos de iSAMS (no publica total)" : "Total oficial de iSAMS"} · ${esc(m.calificadas)} calificados</div>
+      <div class="bar"><i style="width:${Math.max(0, Math.min(100, t || 0))}%"></i></div>
+      <div class="cats"><div class="cat sub"><span>Categoría</span><span class="w">peso</span><span class="a">prom.</span><span class="c">aporta</span></div>
+      ${mc.map(c => `<div class="cat"><span>${esc(c.categoria)} ${yes(c.coincide) || c.promedio_recalculado === "" ? "" : '<span class="chip warn" title="El promedio de iSAMS no cuadra con los trabajos publicados">≠</span>'}</span>
+        <span class="w">${c.peso === "" ? "—" : Math.round(num(c.peso) * 100) + "%"}</span><span class="a ${cls(num(c.promedio_isams))}">${fmt(num(c.promedio_isams))}</span><span class="c">${fmt(num(c.aporte))}</span></div>`).join("")}</div>
+      ${m.avisos ? `<div class="warnbox">${esc(m.avisos)}</div>` : ""}
+      <details><summary>Ver ${me.length} evaluaciones</summary><table><tr><th>Trabajo</th><th>Cat.</th><th>Valor</th></tr>
+      ${me.map(e => `<tr><td>${esc(e.nombre)}${yes(e.ausente) ? ' <span class="chip">ausente</span>' : ""}</td><td>${esc(e.categoria)}</td><td class="n ${cls(num(e.valor))}">${e.valor === "" ? "—" : fmt(num(e.valor))}</td></tr>`).join("")}</table></details></div>`;
+  }).join("") || '<div class="empty">Sin materias.</div>';
+
+  const order = {con_solucion:0, posible:1, revisar:2, bloqueada:3, no_aplica:4};
+  const lab = {con_solucion:"Con solución", posible:"Posible", revisar:"Revisar", bloqueada:"Bloqueada", no_aplica:"No aplica"};
+  const sols = rows("soluciones");
+  const normT = s => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const solDe = p => sols.findIndex(s => normT(s.titulo) === normT(p.Tarea) && (s.estado === "resuelta" || s.estado === "verifica"));
+  const ps = pend.slice().sort((a,b) => (order[a.Estado] ?? 9) - (order[b.Estado] ?? 9));
+  document.getElementById("pend").innerHTML = !D.pendientes ? '<div class="empty">No se pudo leer la pestaña de pendientes.</div>' : ps.length ?
+    `<table><tr><th>Materia</th><th>Tarea</th><th>Fecha</th><th>Estado</th><th>Razón</th><th></th></tr>` +
+    ps.map((p,i) => `<tr><td>${esc(p.Materia)}</td><td>${esc(p.Tarea)}</td><td style="white-space:nowrap">${esc(p.Fecha)}</td>
+      <td><span class="chip ${p.Estado === "bloqueada" ? "bad" : p.Estado === "posible" || p.Estado === "con_solucion" ? "ok" : p.Estado === "revisar" ? "warn" : ""}">${esc(lab[p.Estado] || p.Estado)}</span></td><td>${esc(p["Razón"])}</td>
+      <td>${solDe(p) >= 0 ? `<button class="small" data-sol="${solDe(p)}">Ver solución</button>` : p.Estado === "posible" || p.Estado === "revisar" ? `<button class="small" data-i="${i}">Pedir borrador</button>` : ""}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Sin tareas en los últimos 14 días.</div>';
+  document.querySelectorAll("#pend button[data-i]").forEach(b => b.onclick = async () => {
+    const t = ps[+b.dataset.i].Prompt; try { await navigator.clipboard.writeText(t); b.textContent = "Copiado ✓"; }
+    catch (e) { const ta = document.createElement("textarea"); ta.value = t; ta.rows = 3; ta.style.width = "240px"; b.replaceWith(ta); ta.select(); } });
+  document.querySelectorAll("#pend button[data-sol]").forEach(b => b.onclick = () => {
+    const d = document.getElementById("sol-" + b.dataset.sol); if (d) { d.open = true; openSols.add(d.dataset.k); d.scrollIntoView({behavior: "smooth", block: "start"}); } });
+
+  const solLab = {resuelta:["Resuelta","ok"], verifica:["Revisa ⚠","warn"], bloqueada:["Sin IA (maestro)","bad"], no_aplica:["No aplica",""], sin_archivo:["Sin archivo","warn"]};
+  const fmtSol = t => esc(t).split("\n").map(l => /^Ejercicio\b/i.test(l) ? `<span class="ej">${l}</span>` : /^Respuesta\b/i.test(l) ? `<span class="resp">${l}</span>` : /⚠/.test(l) ? `<span class="ver">${l}</span>` : l).join("\n");
+  const conSol = sols.map((s, i) => [s, i]).filter(([s]) => s.estado === "resuelta" || s.estado === "verifica")
+    .sort((a, b) => String(b[0].fecha_limite || b[0].generado).localeCompare(String(a[0].fecha_limite || a[0].generado)));
+  const sinSol = sols.filter(s => s.estado && s.estado !== "resuelta" && s.estado !== "verifica");
+  document.getElementById("sols").innerHTML = !D.soluciones ? '<div class="empty">No se pudo leer la pestaña de soluciones.</div>' :
+    (conSol.length ? conSol.map(([s, i]) => { const k = s.publicacion_id + "|" + s.firma; return `<details id="sol-${i}" data-k="${esc(k)}" ${openSols.has(k) ? "open" : ""}><summary><span class="t">${esc(s.materia)} — ${esc(s.titulo)}</span>
+      <span class="chip ${solLab[s.estado][1]}">${esc(solLab[s.estado][0])}</span><span class="sub">${s.fecha_limite ? "límite " + esc(s.fecha_limite) + " · " : ""}hecha ${esc(s.generado)}</span></summary>
+      <div class="soltext">${fmtSol(s.solucion)}</div><div class="sub">Archivos: ${esc(s.archivos)}${s.link ? ` · <a href="${esc(s.link)}" target="_blank" rel="noopener">abrir la tarea en Classroom</a>` : ""}</div></details>`; }).join("")
+      : '<div class="empty">Todavía no hay hojas de ejercicios resueltas. La tarea diaria las hace a las 6:41 y 15:41.</div>') +
+    (sinSol.length ? `<details class="card"><summary>${sinSol.length} tarea(s) revisadas sin solución (no son ejercicios, el maestro pidió no usar IA o no se pudo leer el archivo)</summary><table><tr><th>Materia</th><th>Tarea</th><th>Estado</th><th>Por qué</th></tr>` +
+      sinSol.map(s => `<tr><td>${esc(s.materia)}</td><td>${esc(s.titulo)}</td><td><span class="chip ${(solLab[s.estado] || ["",""])[1]}">${esc((solLab[s.estado] || [s.estado])[0])}</span></td><td>${esc(s.solucion)}</td></tr>`).join("") + "</table></details>" : "");
+  document.querySelectorAll("#sols details[data-k]").forEach(d => d.ontoggle = () => { if (d.open) openSols.add(d.dataset.k); else openSols.delete(d.dataset.k); });
+
+  const disc = rows("discrepancias");
+  document.getElementById("discAviso").innerHTML = disc.length ? `<div class="warnbox">${disc.length} calificación(es) distinta(s) entre Classroom e iSAMS: ${disc.map(d => esc(d.materia + " — " + d.trabajo)).join("; ")}. Detalle en Sistema.</div>` : "";
+  document.getElementById("disc").innerHTML = !D.discrepancias ? '<div class="empty">Todavía no hay comparación (la hace el vigilante cada hora).</div>' : disc.length ?
+    `<table><tr><th>Materia</th><th>Trabajo</th><th>iSAMS</th><th>Classroom</th><th>Diferencia</th><th>Desde</th><th></th></tr>` +
+    disc.map(d => `<tr><td>${esc(d.materia)}</td><td>${esc(d.trabajo)}</td><td class="n">${esc(d.isams)}</td><td class="n">${esc(d.classroom)}</td>
+      <td class="n ${num(d.diferencia) < 0 ? "low" : ""}">${num(d.diferencia) > 0 ? "+" : ""}${esc(d.diferencia)} pts</td><td style="white-space:nowrap">${esc(d.detectada)}</td>
+      <td>${d.link ? `<a href="${esc(d.link)}" target="_blank" rel="noopener">Classroom</a>` : ""}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Todo coincide: ninguna calificación de Classroom es distinta a la de iSAMS.</div>';
+
+  const cs = rows("conducta").filter(c => !condNow || yes(c.ciclo_actual));
+  document.getElementById("cond").innerHTML = cs.length ? `<table><tr><th>Fecha</th><th>Tipo</th><th>Maestro</th><th>Descripción</th></tr>` +
+    cs.map(c => `<tr><td style="white-space:nowrap">${esc(c.fecha)}</td><td>${esc(c.categoria || c.tipo)}</td><td>${esc(c.maestro)}</td><td>${esc(c.descripcion)}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Sin registros.</div>';
+
+  const ch = rows("cambios").slice(-300).reverse();
+  document.getElementById("hist").innerHTML = ch.length ? `<table><tr><th>Fecha</th><th>Tipo</th><th>Materia</th><th>Detalle</th><th>Antes</th><th>Después</th></tr>` +
+    ch.map(c => `<tr><td style="white-space:nowrap">${esc(String(c.fecha).slice(0,16).replace("T"," "))}</td><td>${yes(c.negativo) ? '<span class="chip bad">' + esc(c.tipo) + "</span>" : esc(c.tipo)}</td>
+      <td>${esc(c.materia)}</td><td>${esc(c.detalle)}</td><td class="n">${esc(c.antes)}</td><td class="n">${esc(c.despues)}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Todavía no hay cambios registrados (el historial empieza con la primera sincronización).</div>';
+  const bs = rows("boletas");
+  document.getElementById("boletas").innerHTML = bs.length ? `<table><tr><th>Boleta</th><th>Trimestre</th><th>Publicada</th></tr>` +
+    bs.map(b => `<tr><td>${esc(b.nombre)}</td><td>${esc(b.trimestre)}</td><td>${esc(b.publicada)}</td></tr>`).join("") + "</table>" : '<div class="empty">Sin boletas.</div>';
+
+  const ia = Object.fromEntries(rows("ia_estado").map(r => [r.campo, r.valor]));
+  const iaHtml = ia.ultima_corrida ? `<div class="card" style="margin-bottom:12px"><b>Capa IA (pendientes, notas de Classroom, borradores)</b>
+    <div class="sub">Última corrida ${esc(ago(ia.ultima_corrida))} · estado <span class="chip ${ia.estado === "ok" ? "ok" : ia.estado === "aviso" ? "warn" : "bad"}">${esc(ia.estado)}</span>
+    · borradores: ${esc(ia.borradores_creados)} · soluciones nuevas: ${esc(ia.soluciones_nuevas || "—")} · Cuaderno: ${esc(ia.cuaderno || "—")} · problemas: ${esc(ia.problemas)}</div></div>` : "";
+  const cr = Object.fromEntries(rows("classroom_estado").map(r => [r.campo, r.valor]));
+  const crIso = cr.ultima_corrida ? String(cr.ultima_corrida).replace(" ", "T") + ":00-06:00" : "";
+  const crViejo = crIso && (Date.now() - new Date(crIso)) > 6 * 3600e3;
+  const crHtml = cr.ultima_corrida ? `<div class="card" style="margin-bottom:12px"><b>Classroom (tareas, entregas y adjuntos)</b>
+    <div class="sub">Última lectura ${esc(ago(crIso))} · estado <span class="chip ${cr.estado === "ok" && !crViejo ? "ok" : cr.estado === "error" || crViejo ? "bad" : "warn"}">${esc(crViejo ? "atrasado" : cr.estado)}</span>
+    · ${esc(cr.publicaciones)} publicaciones de ${esc(cr.cursos)} clases · ${esc(cr.adjuntos)} adjuntos${cr.archivos_guardados !== undefined ? ` · ${esc(cr.archivos_guardados)} archivos de tareas guardados para la IA (${esc(cr.archivos_mb)} MB)` : ""} · avisos: ${esc(cr.avisos)}</div></div>` : "";
+  const rs = rows("corridas").slice(-60).reverse();
+  document.getElementById("runs").innerHTML = crHtml + iaHtml + (rs.length ? `<table><tr><th>Fin</th><th>Estado</th><th>Origen</th><th>Evaluaciones</th><th>Cambios</th><th>Detalle</th></tr>` +
+    rs.map(r => `<tr><td style="white-space:nowrap">${esc(String(r.fin).slice(0,16).replace("T"," "))}</td>
+      <td><span class="chip ${r.estado === "ok" ? "ok" : r.estado === "aviso" ? "warn" : "bad"}">${esc(r.estado)}</span></td><td>${esc(r.origen)}</td>
+      <td class="n">${esc(r.evaluaciones)}</td><td class="n">${esc(r.cambios)}</td><td>${esc(r.errores || r.avisos)}</td></tr>`).join("") + "</table>"
+    : '<div class="empty">Sin corridas registradas.</div>');
+  saveSnapshot(R, mats, cats, evs, pend);
+}
+
+async function saveSnapshot(R, mats, cats, evs, pend){
+  // Copia para que Claude pueda leer el dashboard desde cualquier chat (db del artifact).
+  if (!db || !mats.length) return;
+  const snap = {resumen: R, materias: mats.filter(m => !yes(m.archivada)), categorias: cats,
+    evaluaciones: evs.filter(e => !yes(e.archivada)), pendientes: pend,
+    conducta: rows("conducta").filter(c => yes(c.ciclo_actual)), cambios: rows("cambios").slice(-50),
+    ceros_notas: rows("ceros_notas"), ia_estado: rows("ia_estado"), classroom_estado: rows("classroom_estado"),
+    corridas: rows("corridas").slice(-10), discrepancias: rows("discrepancias"),
+    soluciones: rows("soluciones").map(s => ({materia: s.materia, titulo: s.titulo, fecha_limite: s.fecha_limite, estado: s.estado, generado: s.generado}))};
+  const s = JSON.stringify(snap); if (s === lastSaved) return; lastSaved = s;
+  try { await db.doc("snapshot/latest").set({guardado: new Date().toISOString(), datos: s}); } catch (e) { /* solo lectura para otros */ }
+}
+
+function show(v){ view = v; document.querySelectorAll("#nav button").forEach(b => b.classList.toggle("on", b.dataset.v === v));
+  document.querySelectorAll("main > section").forEach(s => s.classList.toggle("hidden", s.id !== "v-" + v)); }
+document.querySelectorAll("#nav button").forEach(b => b.onclick = () => show(b.dataset.v));
+document.querySelectorAll("#condseg button").forEach(b => b.onclick = () => { condNow = b.dataset.c === "1";
+  document.querySelectorAll("#condseg button").forEach(x => x.classList.toggle("on", x === b)); render(); });
+
+async function loadAll(fresh){
+  document.getElementById("gate").innerHTML = "";
+  const keys = Object.keys(RANGES);
+  const res = await Promise.allSettled(keys.map(k => mcp.callTool(SERVER, "get_values", {spreadsheetId: SHEET, range: RANGES[k]}, fresh ? {cache:{refresh:true}} : undefined)));
+  const errs = [];
+  res.forEach((r, i) => { if (r.status === "fulfilled") D[keys[i]] = r.value.payload; else errs.push(r.reason); });
+  if (errs.length === keys.length) {
+    document.getElementById("gate").innerHTML = `<div class="err">${esc(codeMsg(errs[0]))} <button class="small" id="retry">Dar permiso y cargar</button></div>`;
+    document.getElementById("retry").onclick = () => loadAll(true); return false;
+  }
+  render(); return true;
+}
+function watch(){
+  Object.entries(RANGES).forEach(([k, range]) => mcp.watchTool(SERVER, "get_values", {spreadsheetId: SHEET, range}, ev => {
+    if (ev.type === "data") { D[k] = ev.result.payload; render(); }
+    else if (["needs_reauth","server_not_connected","blocked_by_policy","approval_required","not_in_manifest"].includes(ev.error && ev.error.code)) { delete D[k]; render(); }
+  }, {refetchInterval: 5 * 60 * 1000}));
+}
+(async () => {
+  [mcp, db] = await Promise.all([claude.use("mcp"), claude.use("db")]);
+  if (!mcp) { document.getElementById("gate").innerHTML = '<div class="err">Esta vista no puede leer la hoja de datos. Ábrela desde claude.ai con tu cuenta.</div>'; return; }
+  if (await loadAll(false)) watch();
+})();
+</script>
+</body>
+</html>
