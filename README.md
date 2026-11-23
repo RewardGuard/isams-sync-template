@@ -46,7 +46,7 @@ Si algo falla, vuelve a pegar el mismo comando: **retoma donde se quedó**.
 
 En [claude.ai](https://claude.ai) activa los conectores de **Google Drive / Sheets** (con la cuenta personal, dueña de la hoja) y de **Gmail**, abre un chat nuevo y pega el prompt (Cmd+V / Ctrl+V). Claude te pregunta por tus maestros y tus materias, y deja:
 
-- un **dashboard** en vivo (GPA estimado, ceros y cuánto subirías si los entregas, pendientes, soluciones paso a paso, conducta, historial),
+- un **dashboard** en vivo (GPA estimado, ceros y cuánto subirías si los entregas, pendientes, soluciones paso a paso, conducta, historial). En **Pendientes**, el botón **Hacer con IA** lee la tarea y los archivos del maestro y Claude la hace ahí mismo (la primera vez te pide permiso para usar Claude; gasta de tu uso como un mensaje normal). Las tareas donde el maestro pidió no usar IA no tienen botón,
 - una **tarea diaria** (6:41 y 15:41) que actualiza pendientes, resuelve hojas de ejercicios y deja borradores para tus maestros.
 
 ## Qué necesitas
