@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi letra: tu letra para tus notas</title>
+<style>
+:root{--bg:#F6F5F1;--panel:#fff;--ink:#1D2530;--muted:#5F6B78;--line:#E2E0D8;--accent:#2E5BBA;--warn:#A1521B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 20px 60px}
+h1{font-size:26px;margin:0 0 4px}
+h2{font-size:18px;margin:0 0 8px}
+p{margin:0 0 10px}
+.muted{color:var(--muted)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0}
+.paso{display:inline-block;width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;text-align:center;line-height:26px;font-size:14px;margin-right:8px}
+button,.boton{font:inherit;font-size:14px;padding:7px 14px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
+button.principal{background:var(--ink);color:#fff;border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+.fila{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+input[type=text]{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:8px}
+#estado{min-height:22px}
+#estado.error{color:var(--warn)}
+.vistas{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px}
+.vistas canvas{border:1px solid var(--line);border-radius:8px;max-width:100%;background:#fff}
+#manualZona canvas{cursor:crosshair}
+#glifos{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px;margin-top:10px}
+#glifos div{border:1px solid var(--line);border-radius:8px;text-align:center;padding:4px 0 2px;background:#fff}
+#glifos b{display:block;font:400 30px/1.25 "MiLetraUsuario",cursive;color:#1B3A93;min-height:38px}
+#glifos small{color:var(--muted);font-size:11px}
+#glifos .falta{background:#FBF3EC}
+#glifos .falta b{color:#C9B8A8;font-family:ui-sans-serif,system-ui,sans-serif;font-size:20px}
+textarea{width:100%;min-height:120px;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;resize:vertical}
+.controles{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;color:var(--muted);margin:10px 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:4px 10px;font-size:13px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.hoja{--ink:#1B3A93;--tam:30px;--renglon:46px;--base:30px;--cuadro:18px;position:relative;margin-top:6px;border:1px solid #DCD9CF;border-radius:10px;padding:22px 26px 22px 60px;min-height:300px;background-color:#FBFAF6;overflow:hidden}
+.hoja[data-papel=renglon]{background-image:linear-gradient(90deg,transparent 46px,#E7A1A1 46px,#E7A1A1 48px,transparent 48px),repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--renglon) - 1px),#A9BDD9 calc(var(--renglon) - 1px),#A9BDD9 var(--renglon));background-position:0 0,0 calc(22px + var(--base) - var(--renglon) + 1px)}
+.hoja[data-papel=cuadricula]{background-image:repeating-linear-gradient(to right,transparent 0,transparent calc(var(--cuadro) - 1px),#CBD5E4 calc(var(--cuadro) - 1px),#CBD5E4 var(--cuadro)),repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--cuadro) - 1px),#CBD5E4 calc(var(--cuadro) - 1px),#CBD5E4 var(--cuadro))}
+.hoja[data-papel=blanco]{background-image:none}
+.escritura{font-family:"MiLetraUsuario",cursive;font-size:var(--tam);line-height:var(--renglon);color:var(--ink);white-space:pre-wrap;word-wrap:break-word}
+.hidden{display:none!important}
+#plantillaImpresion{display:none}
+@page{size:letter;margin:0}
+@media print{
+  body{background:#fff}
+  body.imprime-plantilla main{display:none}
+  body.imprime-plantilla #plantillaImpresion{display:block}
+  body.imprime-plantilla #plantillaImpresion svg{width:8.5in;height:11in;display:block}
+  body.imprime-notas main>*{display:none}
+  body.imprime-notas main>#notasSec{display:block;border:0;padding:0;margin:0}
+  body.imprime-notas #notasSec>*:not(#hoja){display:none}
+  body.imprime-notas #hoja{border:0;border-radius:0;min-height:0}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Mi letra</h1>
+  <p class="muted">Haz una fuente con tu propia letra a partir de una foto y úsala para escribir tus notas. Todo pasa en tu navegador: tu foto no se sube a ningún lado.</p>
+
+  <section id="paso1">
+    <h2><span class="paso">1</span>Imprime la plantilla</h2>
+    <p>Imprímela en hoja tamaño carta. Si tu papel es A4, elige "ajustar a la página" para que se vean las cuatro esquinas.</p>
+    <div class="fila">
+      <button class="principal" id="btnImprimir" type="button">Imprimir plantilla</button>
+      <button id="btnSvg" type="button">Descargar plantilla (SVG)</button>
+    </div>
+  </section>
+
+  <section id="paso2">
+    <h2><span class="paso">2</span>Llénala a mano</h2>
+    <p>Escribe cada carácter dentro de su cuadro, apoyado en la línea azul, con pluma o plumón oscuro. No escribas sobre los cuadros negros de las esquinas: sirven para enderezar la foto. Si dejas un cuadro vacío, ese carácter se verá con otra letra.</p>
+  </section>
+
+  <section id="paso3">
+    <h2><span class="paso">3</span>Sube una foto</h2>
+    <p>Toma la foto de frente, con buena luz y que se vean los cuatro cuadros negros.</p>
+    <div class="fila">
+      <input type="file" id="foto" accept="image/*">
+      <button id="btnManual" type="button" class="hidden">Marcar esquinas a mano</button>
+    </div>
+    <p id="estado" class="muted"></p>
+    <div id="manualZona" class="hidden">
+      <p>Haz clic en el centro de los cuatro cuadros negros en este orden: <b>arriba a la izquierda (el que tiene hueco)</b>, arriba a la derecha, abajo a la derecha y abajo a la izquierda.</p>
+      <canvas id="manualCanvas"></canvas>
+    </div>
+    <div class="vistas">
+      <canvas id="vistaFoto" class="hidden" title="Tu foto con las esquinas detectadas"></canvas>
+      <canvas id="vistaHoja" class="hidden" title="Tu plantilla enderezada"></canvas>
+    </div>
+  </section>
+
+  <section id="paso4" class="hidden">
+    <h2><span class="paso">4</span>Tu fuente</h2>
+    <p id="resumenFuente" class="muted"></p>
+    <div class="fila">
+      <label>Nombre: <input type="text" id="nombreFuente" value="Mi Letra" maxlength="40"></label>
+      <button class="principal" id="btnDescargar" type="button">Descargar fuente (.otf)</button>
+    </div>
+    <div id="glifos"></div>
+  </section>
+
+  <section id="notasSec">
+    <h2><span class="paso">5</span>Tus notas con tu letra</h2>
+    <p class="muted" id="sinFuente">Primero haz tu fuente (pasos 1 a 4) o carga una que ya hiciste.</p>
+    <div class="fila">
+      <label class="boton">Cargar una fuente .otf <input type="file" id="cargarFuente" accept=".otf,.ttf,.woff,font/otf,font/ttf" class="hidden"></label>
+      <button id="btnImprimirNotas" type="button">Imprimir notas</button>
+    </div>
+    <textarea id="notas" placeholder="Escribe o pega aquí tus notas..."></textarea>
+    <div class="controles">
+      <span>Papel</span><div class="seg" data-ctl="papel"><button type="button" data-v="renglon" aria-pressed="true">Renglón</button><button type="button" data-v="cuadricula" aria-pressed="false">Cuadrícula</button><button type="button" data-v="blanco" aria-pressed="false">Blanco</button></div>
+      <span>Tinta</span><div class="seg" data-ctl="tinta"><button type="button" data-v="#1B3A93" aria-pressed="true">Azul</button><button type="button" data-v="#1E1E22" aria-pressed="false">Negra</button><button type="button" data-v="#2F6B3A" aria-pressed="false">Verde</button></div>
+      <span>Tamaño</span><input type="range" id="tam" min="18" max="56" value="30" aria-label="Tamaño de letra">
+    </div>
+    <div class="hoja" id="hoja" data-papel="renglon"><div class="escritura" id="escritura"></div></div>
+  </section>
+  <p class="muted" style="font-size:13px">Usa <a href="opentype.LICENSE">opentype.js</a> (licencia MIT) para crear la fuente.</p>
+</main>
+<div id="plantillaImpresion"></div>
+
+<script src="opentype.min.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ---------- Plantilla ---------- */
+const CHARS = Array.from(
+  "abcdefghijklmnopqrstuvwxyz" + "ñáéíóú" +
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "ÑÁÉÍÓÚ" +
+  "0123456789" + ".,;:¿?¡!()" + "-+=/%\"'@#$" + "&*_√°ü");
+// Unidades de la plantilla: 200 por pulgada (carta = 1700 x 2200).
+const T = {
+  W: 1700, H: 2200, mk: 80,
+  marcas: [[60, 60], [1560, 60], [1560, 2060], [60, 2060]], // arriba-izq (con hueco), arriba-der, abajo-der, abajo-izq
+  cols: 10, x0: 100, y0: 250, cw: 150, ch: 175,
+  etiqueta: 32,   // franja de arriba con el carácter impreso
+  base: 105,      // línea base, medida desde el inicio del área para escribir
+  xh: 48,         // altura de la x sobre la línea base
+  margen: 8,      // lo que se recorta en cada borde del área para escribir
+  S: 2            // muestras por unidad al leer cada cuadro
+};
+const CENTROS = T.marcas.map(([x, y]) => [x + T.mk / 2, y + T.mk / 2]);
+const U = 8;      // unidades de fuente por unidad de plantilla (1000 por em)
+const LSB = 50;   // espacio a los lados de cada letra, en unidades de fuente
+
+function celda(i){
+  const col = i % T.cols, fila = Math.floor(i / T.cols);
+  return { x: T.x0 + col * T.cw, y: T.y0 + fila * T.ch };
+}
+function recorte(i){
+  const c = celda(i);
+  return { x: c.x + T.margen, y: c.y + T.etiqueta + T.margen, w: T.cw - 2 * T.margen, h: T.ch - T.etiqueta - 2 * T.margen,
+           base: T.base - T.margen }; // línea base dentro del recorte
+}
+function esc(s){ return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+
+function plantillaSVG(){
+  let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${T.W} ${T.H}" width="8.5in" height="11in">`;
+  s += `<rect width="${T.W}" height="${T.H}" fill="#fff"/>`;
+  T.marcas.forEach(([x, y], i) => {
+    s += `<rect x="${x}" y="${y}" width="${T.mk}" height="${T.mk}" fill="#000"/>`;
+    if (i === 0) s += `<rect x="${x + 20}" y="${y + 20}" width="40" height="40" fill="#fff"/>`;
+  });
+  s += `<text x="${T.W / 2}" y="118" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="40" font-weight="700" fill="#555">Mi letra · plantilla</text>`;
+  s += `<text x="${T.W / 2}" y="170" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="24" fill="#777">Escribe cada carácter en su cuadro, sobre la línea azul, con pluma oscura. No escribas sobre los cuadros negros.</text>`;
+  s += `<text x="${T.W / 2}" y="206" text-anchor="middle" font-family="Helvetica,Arial,sans-serif" font-size="24" fill="#777">La línea punteada marca la altura de las minúsculas (a, c, e...).</text>`;
+  CHARS.forEach((ch, i) => {
+    const { x, y } = celda(i), by = y + T.etiqueta + T.base;
+    s += `<rect x="${x}" y="${y}" width="${T.cw}" height="${T.ch}" fill="none" stroke="#C9CED4" stroke-width="2"/>`;
+    s += `<line x1="${x}" y1="${y + T.etiqueta}" x2="${x + T.cw}" y2="${y + T.etiqueta}" stroke="#C9CED4" stroke-width="2"/>`;
+    s += `<text x="${x + 10}" y="${y + 24}" font-family="Helvetica,Arial,sans-serif" font-size="21" fill="#8A939C">${esc(ch)}</text>`;
+    s += `<line x1="${x + 6}" y1="${by}" x2="${x + T.cw - 6}" y2="${by}" stroke="#BCD7EF" stroke-width="2"/>`;
+    s += `<line x1="${x + 6}" y1="${by - T.xh}" x2="${x + T.cw - 6}" y2="${by - T.xh}" stroke="#D6E6F5" stroke-width="2" stroke-dasharray="6 6"/>`;
+  });
+  return s + "</svg>";
+}
+
+function descargar(nombre, datos, tipo){
+  const url = URL.createObjectURL(new Blob([datos], { type: tipo }));
+  const a = document.createElement("a"); a.href = url; a.download = nombre;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ---------- Estado de la página ---------- */
+function estado(msg, error){ $("estado").textContent = msg; $("estado").classList.toggle("error", !!error); }
+
+/* ---------- Imagen ---------- */
+async function cargarImagen(file){
+  let fuente;
+  try { fuente = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch (e) {
+    fuente = await new Promise((ok, mal) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => mal(new Error("imagen")); im.src = URL.createObjectURL(file); });
+  }
+  const w0 = fuente.width, h0 = fuente.height, k = Math.min(1, 3000 / Math.max(w0, h0));
+  const w = Math.round(w0 * k), h = Math.round(h0 * k);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const cx = cv.getContext("2d", { willReadFrequently: true });
+  cx.drawImage(fuente, 0, 0, w, h);
+  const d = cx.getImageData(0, 0, w, h).data, L = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < L.length; i++, j += 4) L[i] = 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
+  return { w, h, L, canvas: cv };
+}
+function reducir(img, lado){
+  const k = Math.min(1, lado / Math.max(img.w, img.h)), w = Math.round(img.w * k), h = Math.round(img.h * k);
+  const g = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) g[y * w + x] = muestra(img, (x + 0.5) / k - 0.5, (y + 0.5) / k - 0.5);
+  return { w, h, g, k };
+}
+function muestra(img, x, y){
+  const { w, h, L } = img;
+  if (x < 0) x = 0; if (y < 0) y = 0; if (x > w - 1) x = w - 1; if (y > h - 1) y = h - 1;
+  const x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(x0 + 1, w - 1), y1 = Math.min(y0 + 1, h - 1), fx = x - x0, fy = y - y0;
+  const a = L[y0 * w + x0], b = L[y0 * w + x1], c = L[y1 * w + x0], e = L[y1 * w + x1];
+  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + e * fx) * fy;
+}
+function otsu(vals){
+  const hist = new Float64Array(256); let n = 0;
+  for (const v of vals) { hist[Math.max(0, Math.min(255, v | 0))]++; n++; }
+  let suma = 0; for (let i = 0; i < 256; i++) suma += i * hist[i];
+  let sB = 0, wB = 0, mejor = 0, t = 127;
+  for (let i = 0; i < 256; i++) {
+    wB += hist[i]; if (!wB) continue; const wF = n - wB; if (!wF) break;
+    sB += i * hist[i]; const mB = sB / wB, mF = (suma - sB) / wF, v = wB * wF * (mB - mF) * (mB - mF);
+    if (v > mejor) { mejor = v; t = i; }
+  }
+  return t;
+}
+
+/* ---------- Detección de los cuadros negros ---------- */
+function detectarMarcas(r){
+  const { w, h, g } = r, t = otsu(g), lab = new Int32Array(w * h), pila = new Int32Array(w * h), comps = [];
+  for (let i = 0; i < w * h; i++) {
+    if (lab[i] || g[i] >= t) continue;
+    const id = comps.length + 1; let sp = 0, area = 0, sx = 0, sy = 0, x0 = w, x1 = 0, y0 = h, y1 = 0;
+    pila[sp++] = i; lab[i] = id;
+    while (sp) {
+      const p = pila[--sp], x = p % w, y = (p - x) / w;
+      area++; sx += x; sy += y; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && !lab[p - 1] && g[p - 1] < t) { lab[p - 1] = id; pila[sp++] = p - 1; }
+      if (x < w - 1 && !lab[p + 1] && g[p + 1] < t) { lab[p + 1] = id; pila[sp++] = p + 1; }
+      if (y > 0 && !lab[p - w] && g[p - w] < t) { lab[p - w] = id; pila[sp++] = p - w; }
+      if (y < h - 1 && !lab[p + w] && g[p + w] < t) { lab[p + w] = id; pila[sp++] = p + w; }
+    }
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    comps.push({ area, cx: sx / area, cy: sy / area, bw, bh, lleno: area / (bw * bh) });
+  }
+  const minA = Math.max(40, w * h * 0.00006), maxA = w * h * 0.02;
+  const cand = comps.filter(c => c.area >= minA && c.area <= maxA && c.bw / c.bh > 0.5 && c.bw / c.bh < 2 && c.lleno >= 0.4)
+                    .sort((a, b) => b.area - a.area).slice(0, 14);
+  let mejor = null;
+  for (let a = 0; a < cand.length; a++) for (let b = a + 1; b < cand.length; b++)
+  for (let c = b + 1; c < cand.length; c++) for (let d = c + 1; d < cand.length; d++) {
+    const q = [cand[a], cand[b], cand[c], cand[d]], areas = q.map(o => o.area);
+    if (Math.max(...areas) / Math.min(...areas) > 3.5) continue;
+    const mx = q.reduce((s, o) => s + o.cx, 0) / 4, my = q.reduce((s, o) => s + o.cy, 0) / 4;
+    q.sort((o1, o2) => Math.atan2(o1.cy - my, o1.cx - mx) - Math.atan2(o2.cy - my, o2.cx - mx));
+    let signo = 0, convexo = true, area2 = 0;
+    for (let k = 0; k < 4; k++) {
+      const p = q[k], s1 = q[(k + 1) % 4], s2 = q[(k + 2) % 4];
+      const cr = (s1.cx - p.cx) * (s2.cy - s1.cy) - (s1.cy - p.cy) * (s2.cx - s1.cx);
+      if (!signo) signo = Math.sign(cr); else if (Math.sign(cr) !== signo) convexo = false;
+      area2 += p.cx * s1.cy - s1.cx * p.cy;
+    }
+    const areaQ = Math.abs(area2) / 2;
+    if (!convexo || areaQ < w * h * 0.08) continue;
+    if (!mejor || areaQ > mejor.areaQ) mejor = { q: q.slice(), areaQ };
+  }
+  if (!mejor) return null;
+  // El cuadro con hueco (menos lleno) es el de arriba a la izquierda; el orden por ángulo ya va en el sentido del reloj.
+  const q = mejor.q; let ti = 0;
+  for (let k = 1; k < 4; k++) if (q[k].lleno < q[ti].lleno) ti = k;
+  const llenos = q.map(o => o.lleno).sort((a, b) => a - b);
+  if (llenos[1] - llenos[0] < 0.05) return null; // no se distingue cuál es el de arriba a la izquierda
+  return [0, 1, 2, 3].map(k => q[(ti + k) % 4]).map(o => [o.cx, o.cy]);
+}
+
+/* ---------- Homografía (plantilla -> foto) ---------- */
+function homografia(de, a){
+  const M = [], v = [];
+  for (let i = 0; i < 4; i++) {
+    const [u, w] = de[i], [x, y] = a[i];
+    M.push([u, w, 1, 0, 0, 0, -u * x, -w * x]); v.push(x);
+    M.push([0, 0, 0, u, w, 1, -u * y, -w * y]); v.push(y);
+  }
+  for (let c = 0; c < 8; c++) {
+    let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+    [M[c], M[p]] = [M[p], M[c]]; [v[c], v[p]] = [v[p], v[c]];
+    if (Math.abs(M[c][c]) < 1e-12) return null;
+    for (let r = 0; r < 8; r++) if (r !== c) {
+      const f = M[r][c] / M[c][c];
+      for (let k = c; k < 8; k++) M[r][k] -= f * M[c][k];
+      v[r] -= f * v[c];
+    }
+  }
+  const h = v.map((val, i) => val / M[i][i]); h.push(1);
+  return h;
+}
+function aplicar(h, u, w){ const z = h[6] * u + h[7] * w + 1; return [(h[0] * u + h[1] * w + h[2]) / z, (h[3] * u + h[4] * w + h[5]) / z]; }
+
+/* ---------- Lectura de cada cuadro ---------- */
+function leerCelda(img, H, i){
+  const r = recorte(i), W = r.w * T.S, Hh = r.h * T.S, L = new Float32Array(W * Hh);
+  for (let y = 0; y < Hh; y++) for (let x = 0; x < W; x++) {
+    const [px, py] = aplicar(H, r.x + (x + 0.5) / T.S, r.y + (y + 0.5) / T.S);
+    L[y * W + x] = muestra(img, px, py);
+  }
+  const orden = Float32Array.from(L).sort(), fondo = orden[Math.floor(orden.length * 0.9)];
+  let t = otsu(L); t = Math.min(Math.max(t, fondo * 0.40), fondo * 0.68);
+  const tinta = new Uint8Array(W * Hh); let n = 0;
+  for (let k = 0; k < L.length; k++) if (L[k] < t) { tinta[k] = 1; n++; }
+  if (n < 40) return null;
+  limpiar(tinta, W, Hh);
+  let m = 0; for (let k = 0; k < tinta.length; k++) m += tinta[k];
+  if (m < 40) return null; // un punto (.) mide unas 60 muestras
+  return { tinta, W, H: Hh, base: r.base * T.S };
+}
+// Quita puntitos sueltos y restos de las orillas del cuadro.
+function limpiar(t, W, H){
+  const lab = new Int32Array(W * H), pila = new Int32Array(W * H);
+  let id = 0;
+  for (let i = 0; i < W * H; i++) {
+    if (!t[i] || lab[i]) continue;
+    id++; let sp = 0; const pix = []; let x0 = W, x1 = 0, y0 = H, y1 = 0;
+    pila[sp++] = i; lab[i] = id;
+    while (sp) {
+      const p = pila[--sp], x = p % W, y = (p - x) / W; pix.push(p);
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+        const q = ny * W + nx; if (t[q] && !lab[q]) { lab[q] = id; pila[sp++] = q; }
+      }
+    }
+    const bw = x1 - x0 + 1, bh = y1 - y0 + 1, toca = x0 === 0 || y0 === 0 || x1 === W - 1 || y1 === H - 1;
+    const linea = toca && ((bw > W * 0.5 && bh <= 10) || (bh > H * 0.5 && bw <= 10));
+    if (pix.length < 25 || linea) for (const p of pix) t[p] = 0;
+  }
+}
+
+/* ---------- De pixeles a contornos ---------- */
+// Recorre las orillas entre tinta y papel con la tinta siempre a la derecha (en coordenadas de pantalla).
+// Así los contornos de afuera y los huecos quedan en sentidos contrarios, como pide una fuente.
+function contornos(t, W, H){
+  const V = (W + 1) * (H + 1), sal = new Int32Array(V * 2).fill(-1), dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  const tin = (x, y) => x >= 0 && y >= 0 && x < W && y < H && t[y * W + x] === 1;
+  const agrega = (x, y, d) => { const v = y * (W + 1) + x; if (sal[v * 2] < 0) sal[v * 2] = d; else sal[v * 2 + 1] = d; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!tin(x, y)) continue;
+    if (!tin(x, y - 1)) agrega(x, y, 0);
+    if (!tin(x + 1, y)) agrega(x + 1, y, 1);
+    if (!tin(x, y + 1)) agrega(x + 1, y + 1, 2);
+    if (!tin(x - 1, y)) agrega(x, y + 1, 3);
+  }
+  const usado = new Uint8Array(V * 2), lazos = [];
+  for (let v0 = 0; v0 < V; v0++) for (let s0 = 0; s0 < 2; s0++) {
+    if (sal[v0 * 2 + s0] < 0 || usado[v0 * 2 + s0]) continue;
+    let v = v0, s = s0; const pts = [];
+    for (let guard = 0; guard < 4 * V; guard++) {
+      usado[v * 2 + s] = 1;
+      const d = sal[v * 2 + s], x = v % (W + 1), y = (v - x) / (W + 1); pts.push([x, y]);
+      const nv = (y + dirs[d][1]) * (W + 1) + x + dirs[d][0];
+      // En un cruce diagonal hay dos salidas: se toma la vuelta a la izquierda para que los trazos diagonales queden unidos.
+      let k = 0;
+      if (sal[nv * 2 + 1] >= 0 && sal[nv * 2 + 1] === (d + 3) % 4) k = 1;
+      if (nv === v0 && k === s0) break; // se cerró el lazo
+      if (sal[nv * 2 + k] < 0 || usado[nv * 2 + k]) break;
+      v = nv; s = k;
+    }
+    if (pts.length >= 8) lazos.push(pts);
+  }
+  return lazos;
+}
+function rdp(pts, eps){
+  if (pts.length < 3) return pts;
+  const [a, b] = [pts[0], pts[pts.length - 1]]; let maxd = -1, idx = 0;
+  const dx = b[0] - a[0], dy = b[1] - a[1], len = Math.hypot(dx, dy) || 1;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + b[0] * a[1] - b[1] * a[0]) / len;
+    if (d > maxd) { maxd = d; idx = i; }
+  }
+  if (maxd <= eps) return [a, b];
+  return rdp(pts.slice(0, idx + 1), eps).slice(0, -1).concat(rdp(pts.slice(idx), eps));
+}
+function suavizar(lazo){
+  const n = lazo.length; if (n < 8) return null;
+  const medios = [];
+  for (let i = 0; i < n; i++) { const a = lazo[i], b = lazo[(i + 1) % n]; medios.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }
+  // Cierra el lazo partiéndolo en el punto más lejano al primero.
+  let far = 0, fd = -1;
+  for (let i = 1; i < medios.length; i++) { const d = Math.hypot(medios[i][0] - medios[0][0], medios[i][1] - medios[0][1]); if (d > fd) { fd = d; far = i; } }
+  const p1 = rdp(medios.slice(0, far + 1), 0.9), p2 = rdp(medios.slice(far).concat([medios[0]]), 0.9);
+  const p = p1.slice(0, -1).concat(p2.slice(0, -1));
+  return p.length >= 3 ? p : null;
+}
+
+/* ---------- Fuente ---------- */
+function glifo(ch, cel){
+  const lazos = contornos(cel.tinta, cel.W, cel.H).map(suavizar).filter(Boolean);
+  if (!lazos.length) return null;
+  let x0 = Infinity, x1 = -Infinity;
+  for (const l of lazos) for (const [x] of l) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+  const k = U / T.S, X = x => Math.round((x - x0) * k + LSB), Y = y => Math.round((cel.base - y) * k);
+  const path = new opentype.Path();
+  for (const p of lazos) {
+    const n = p.length, m = i => [(p[i % n][0] + p[(i + 1) % n][0]) / 2, (p[i % n][1] + p[(i + 1) % n][1]) / 2];
+    const s = m(n - 1); path.moveTo(X(s[0]), Y(s[1]));
+    for (let i = 0; i < n; i++) { const e = m(i); path.quadraticCurveTo(X(p[i][0]), Y(p[i][1]), X(e[0]), Y(e[1])); }
+    path.close();
+  }
+  return new opentype.Glyph({ name: "u" + ch.codePointAt(0).toString(16).toUpperCase().padStart(4, "0"), unicode: ch.codePointAt(0),
+                              advanceWidth: Math.round((x1 - x0) * k + 2 * LSB), path });
+}
+function armarFuente(glifos, nombre){
+  const lista = [new opentype.Glyph({ name: ".notdef", unicode: 0, advanceWidth: 500, path: new opentype.Path() }),
+                 new opentype.Glyph({ name: "space", unicode: 32, advanceWidth: 300, path: new opentype.Path() })];
+  for (const g of glifos) if (g) lista.push(g);
+  const f = new opentype.Font({ familyName: nombre || "Mi Letra", styleName: "Regular", unitsPerEm: 1000, ascender: 800, descender: -260, glyphs: lista });
+  return f.toArrayBuffer();
+}
+
+/* ---------- Flujo ---------- */
+let FOTO = null, FUENTE = null, FALTAN = [];
+
+$("foto").onchange = async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  $("paso4").classList.add("hidden"); $("manualZona").classList.add("hidden");
+  estado("Leyendo la foto...");
+  try { FOTO = await cargarImagen(f); }
+  catch (err) { estado("No pude abrir esa imagen. Prueba con una foto JPG o PNG.", true); return; }
+  $("btnManual").classList.remove("hidden");
+  await new Promise(r => setTimeout(r, 30));
+  const red = reducir(FOTO, 1200), pts = detectarMarcas(red);
+  if (!pts) { estado("No encontré los cuatro cuadros negros. Márcalos a mano.", true); abrirManual(); return; }
+  const src = pts.map(([x, y]) => [(x + 0.5) / red.k - 0.5, (y + 0.5) / red.k - 0.5]);
+  await procesar(src);
+};
+
+async function procesar(src){
+  const H = homografia(CENTROS, src);
+  if (!H) { estado("Las esquinas no forman una hoja. Márcalas a mano.", true); abrirManual(); return; }
+  dibujarFoto(src); dibujarHoja(H);
+  estado("Leyendo tus letras...");
+  await new Promise(r => setTimeout(r, 30));
+  const glifos = []; FALTAN = [];
+  for (let i = 0; i < CHARS.length; i++) {
+    const cel = leerCelda(FOTO, H, i), g = cel && glifo(CHARS[i], cel);
+    if (g) glifos.push(g); else FALTAN.push(CHARS[i]);
+    if (i % 20 === 19) await new Promise(r => setTimeout(r, 0));
+  }
+  if (glifos.length < 10) { estado(`Solo pude leer ${glifos.length} letras. Revisa que la foto esté derecha y con buena luz, o marca las esquinas a mano.`, true); return; }
+  window.__GLIFOS = glifos;
+  await usarFuente(armarFuente(glifos, $("nombreFuente").value.trim()), true);
+  estado(`Listo: leí ${glifos.length} de ${CHARS.length} caracteres.`);
+}
+
+async function usarFuente(buf, nueva){
+  try {
+    const ff = new FontFace("MiLetraUsuario", buf);
+    await ff.load();
+    for (const f of [...document.fonts]) if (f.family.replace(/"/g, "") === "MiLetraUsuario") document.fonts.delete(f);
+    document.fonts.add(ff);
+  } catch (e) { estado("No pude cargar esa fuente.", true); return; }
+  FUENTE = buf;
+  $("sinFuente").classList.add("hidden");
+  if (nueva) {
+    try { localStorage.setItem("miletra.fuente", aBase64(buf)); } catch (e) {}
+    mostrarGlifos();
+  }
+  ajustarHoja();
+}
+function mostrarGlifos(){
+  const g = $("glifos"); g.innerHTML = "";
+  for (const ch of CHARS) {
+    const d = document.createElement("div"), falta = FALTAN.includes(ch);
+    if (falta) d.className = "falta";
+    d.innerHTML = `<b></b><small>${falta ? "falta" : esc(ch)}</small>`;
+    d.querySelector("b").textContent = ch;
+    g.appendChild(d);
+  }
+  $("resumenFuente").textContent = FALTAN.length
+    ? `Faltan ${FALTAN.length}: ${FALTAN.join(" ")}. Esos se verán con otra letra; si quieres, llénalos y vuelve a subir la foto.`
+    : "Se leyeron todos los caracteres. Revisa que cada uno se vea bien.";
+  $("paso4").classList.remove("hidden");
+}
+function aBase64(buf){ let s = ""; const b = new Uint8Array(buf); for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(s); }
+function deBase64(s){ const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer; }
+
+/* ---------- Vistas de revisión ---------- */
+function dibujarFoto(src){
+  const cv = $("vistaFoto"), k = 300 / FOTO.w; cv.width = 300; cv.height = Math.round(FOTO.h * k);
+  const cx = cv.getContext("2d"); cx.drawImage(FOTO.canvas, 0, 0, cv.width, cv.height);
+  cx.fillStyle = "#E0362C";
+  src.forEach(([x, y], i) => { cx.beginPath(); cx.arc(x * k, y * k, 6, 0, 7); cx.fill(); cx.font = "bold 12px sans-serif"; cx.fillText(String(i + 1), x * k + 8, y * k - 6); });
+  cv.classList.remove("hidden");
+}
+function dibujarHoja(H){
+  const s = 0.2, cv = $("vistaHoja"); cv.width = Math.round(T.W * s); cv.height = Math.round(T.H * s);
+  const cx = cv.getContext("2d"), im = cx.createImageData(cv.width, cv.height);
+  for (let y = 0; y < cv.height; y++) for (let x = 0; x < cv.width; x++) {
+    const [px, py] = aplicar(H, (x + 0.5) / s, (y + 0.5) / s), v = muestra(FOTO, px, py), j = (y * cv.width + x) * 4;
+    im.data[j] = im.data[j + 1] = im.data[j + 2] = v; im.data[j + 3] = 255;
+  }
+  cx.putImageData(im, 0, 0);
+  cx.strokeStyle = "rgba(224,54,44,.55)"; cx.lineWidth = 1;
+  CHARS.forEach((c, i) => { const r = recorte(i); cx.strokeRect(r.x * s, r.y * s, r.w * s, r.h * s); });
+  cv.classList.remove("hidden");
+}
+
+/* ---------- Esquinas a mano ---------- */
+let CLICS = [];
+function abrirManual(){
+  if (!FOTO) return;
+  CLICS = [];
+  const cv = $("manualCanvas"), k = Math.min(1, 640 / FOTO.w); cv.width = Math.round(FOTO.w * k); cv.height = Math.round(FOTO.h * k); cv.dataset.k = k;
+  cv.getContext("2d").drawImage(FOTO.canvas, 0, 0, cv.width, cv.height);
+  $("manualZona").classList.remove("hidden");
+}
+$("btnManual").onclick = abrirManual;
+$("manualCanvas").onclick = async e => {
+  const cv = e.currentTarget, rc = cv.getBoundingClientRect(), k = +cv.dataset.k;
+  const x = (e.clientX - rc.left) * cv.width / rc.width, y = (e.clientY - rc.top) * cv.height / rc.height;
+  CLICS.push([x / k, y / k]);
+  const cx = cv.getContext("2d"); cx.fillStyle = "#E0362C"; cx.beginPath(); cx.arc(x, y, 6, 0, 7); cx.fill();
+  cx.font = "bold 13px sans-serif"; cx.fillText(String(CLICS.length), x + 8, y - 6);
+  if (CLICS.length === 4) { $("manualZona").classList.add("hidden"); await procesar(CLICS); }
+};
+
+/* ---------- Botones ---------- */
+$("btnSvg").onclick = () => descargar("plantilla-mi-letra.svg", plantillaSVG(), "image/svg+xml");
+$("btnImprimir").onclick = () => {
+  $("plantillaImpresion").innerHTML = plantillaSVG();
+  document.body.classList.add("imprime-plantilla");
+  window.print();
+};
+$("btnImprimirNotas").onclick = () => { document.body.classList.add("imprime-notas"); window.print(); };
+window.addEventListener("afterprint", () => document.body.classList.remove("imprime-plantilla", "imprime-notas"));
+$("btnDescargar").onclick = () => {
+  if (!window.__GLIFOS) return;
+  const nombre = $("nombreFuente").value.trim() || "Mi Letra";
+  const buf = armarFuente(window.__GLIFOS, nombre);
+  descargar(nombre.replace(/[^\w\-]+/g, "") + ".otf", buf, "font/otf");
+};
+$("cargarFuente").onchange = async e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  await usarFuente(await f.arrayBuffer(), false);
+  try { localStorage.setItem("miletra.fuente", aBase64(FUENTE)); } catch (err) {}
+};
+
+/* ---------- Notas ---------- */
+const ASC = 0.8, DESC = 0.26;
+function ajustarHoja(){
+  const hoja = $("hoja"), t = +$("tam").value, Lh = Math.round(t * 1.6);
+  const base = (Lh - (ASC + DESC) * t) / 2 + ASC * t;
+  hoja.style.setProperty("--tam", t + "px"); hoja.style.setProperty("--renglon", Lh + "px");
+  hoja.style.setProperty("--base", base + "px"); hoja.style.setProperty("--cuadro", Math.round(t * 0.62) + "px");
+}
+$("tam").oninput = ajustarHoja;
+document.querySelectorAll(".seg").forEach(seg => seg.onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  seg.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  if (seg.dataset.ctl === "papel") $("hoja").dataset.papel = b.dataset.v;
+  if (seg.dataset.ctl === "tinta") $("hoja").style.setProperty("--ink", b.dataset.v);
+});
+$("notas").oninput = () => {
+  $("escritura").textContent = $("notas").value;
+  try { localStorage.setItem("miletra.notas", $("notas").value); } catch (e) {}
+};
+(async () => {
+  try { const n = localStorage.getItem("miletra.notas"); if (n) { $("notas").value = n; $("escritura").textContent = n; } } catch (e) {}
+  try { const s = localStorage.getItem("miletra.fuente"); if (s) await usarFuente(deBase64(s), false); } catch (e) {}
+  ajustarHoja();
+})();
+</script>
+</body>
+</html>

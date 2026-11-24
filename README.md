@@ -104,6 +104,18 @@ Ajustes opcionales (en tu repo → Settings → Secrets and variables → Action
 4. Agrega un archivo de script `Config` con: `var CONFIG = {SHEET_ID: 'EL_ID_DE_TU_HOJA'};` (el instalador te dio el id; es lo que va entre `/d/` y `/edit` en el link de tu hoja).
 5. Guarda, elige `instalarReloj` y presiona Ejecutar; acepta los permisos.
 
+## Mi letra: tu letra para tus notas
+
+Una página aparte, en la carpeta `mi_letra/`, para hacer una fuente con tu propia letra y escribir tus notas con ella. No usa IA, Classroom ni tu hoja, y funciona sin internet: todo pasa en tu navegador y tu foto no se sube a ningún lado.
+
+1. Abre `mi_letra/index.html` (doble clic, desde la carpeta del ZIP) en Chrome, Edge, Safari o Firefox.
+2. Imprime la plantilla (hoja carta; en A4 elige "ajustar a la página") y llénala a mano con pluma oscura.
+3. Sube una foto. La página encuentra los cuatro cuadros negros, endereza la hoja y lee cada letra. Si no los encuentra, puedes marcarlos a mano.
+4. Revisa tus letras y descarga tu fuente `.otf` (la puedes instalar en tu computadora).
+5. Escribe o pega tus notas y míralas con tu letra, en renglón, cuadrícula o hoja blanca; también las puedes imprimir.
+
+Tu fuente y tus notas se guardan solo en tu navegador. La fuente se arma con [opentype.js](https://github.com/opentypejs/opentype.js) (licencia MIT, incluida en `mi_letra/opentype.LICENSE`).
+
 ## Desinstalar
 
 Borra tu repo privado en GitHub, la hoja y los dos scripts en https://script.google.com, la tarea programada y el artifact en Claude, y la carpeta de herramientas (`~/.isams-sync` en Mac, `%LOCALAPPDATA%\isams-sync` en Windows).
